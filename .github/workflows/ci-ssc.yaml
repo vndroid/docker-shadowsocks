@@ -2,10 +2,8 @@ name: CI Build shadowsocks-libev
 on:
   push:
     branches: ['main']
-    paths-ignore:
-      - '.github/workflows/**'
-  schedule:
-    - cron: '0 8 1 * *'
+    paths:
+      - 'shadowsocks-libev/**'
   workflow_dispatch:
 env:
   REGISTRY: ghcr.io

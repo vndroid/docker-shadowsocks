@@ -34,12 +34,18 @@ RUN set -x \
         ;; \
     esac \
     && wget -qO- "https://github.com/AaronChen0/musl-cc-mirror/releases/download/2021-09-23/$MUSL-cross.tgz" | tee >(sha512sum | grep -q "^$SHA512 " || exit 1) | tar -xzC . \
-    && CC=/src/$MUSL-cross/bin/$MUSL-gcc \
+    && CC="gcc" \
+    && TOOLCHAIN_CC="/src/$MUSL-cross/bin/$MUSL-gcc" \
+    && if [ -x "$TOOLCHAIN_CC" ] && "$TOOLCHAIN_CC" --version >/dev/null 2>&1; then \
+        CC="$TOOLCHAIN_CC"; \
+        echo "Using downloaded cross toolchain: $CC"; \
+    else \
+        echo "WARN: downloaded cross toolchain is not executable on this builder, fallback to native gcc"; \
+    fi \
     && echo "CC=$CC" \
     && rustup target add "$RUST_TARGET" \
     && RUSTFLAGS="-C linker=$CC" CC=$CC cargo build --target "$RUST_TARGET" --release --features "full" \
-    && CC=$CC \
-    && cargo build --target "$RUST_TARGET" --release --features "local-tun local-redir stream-cipher aead-cipher-2022" \
+    && RUSTFLAGS="-C linker=$CC" CC=$CC cargo build --target "$RUST_TARGET" --release --features "local-tun local-redir stream-cipher aead-cipher-2022" \
     && mv target/$RUST_TARGET/release/ss* target/release/ 
 
 FROM alpine:3.21 AS ssserver

@@ -1,27 +1,24 @@
 FROM alpine:3.19 AS builder
 
-ARG VERSION=3.3.5
+ARG VERSION=3.3.6
 
 WORKDIR /usr/local/src
 
 RUN set -x \
-    && apk add --no-cache --virtual .build-deps \
-        git \
-        autoconf \
-        automake \
+    && apk add --no-cache git \
         build-base \
+        cmake \
         c-ares-dev \
         libcap \
         libev-dev \
-        libtool \
         libsodium-dev \
         linux-headers \
         mbedtls-dev \
-        pcre-dev \
+        pcre2-dev \
     && git clone -b v${VERSION} https://github.com/shadowsocks/shadowsocks-libev.git . \
     && git submodule update --init --recursive \
-    && ./autogen.sh \
-    && ./configure --prefix=/usr/local --disable-documentation \
+    && mkdir -p build && cd build \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTING=OFF -DWITH_STATIC=OFF -DCMAKE_BUILD_TYPE=Release \
     && make -j$(getconf _NPROCESSORS_ONLN) \
     && make install \
     && cd /usr/local/bin \

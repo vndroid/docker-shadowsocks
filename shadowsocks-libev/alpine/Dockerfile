@@ -15,13 +15,19 @@ RUN set -x \
         linux-headers \
         mbedtls-dev \
         pcre2-dev \
+        python3 \
+        bash \
     && git clone -b v${VERSION} https://github.com/shadowsocks/shadowsocks-libev.git . \
     && git submodule update --init --recursive \
     && mkdir -p build && cd build \
-    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTING=OFF -DWITH_STATIC=OFF -DCMAKE_BUILD_TYPE=Release \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_STATIC=OFF -DCMAKE_BUILD_TYPE=Release \
     && make -j$(getconf _NPROCESSORS_ONLN) \
-    && make install \
-    && cd /usr/local/bin \
+    && ctest --output-on-failure \
+    && python3 ../tests/stress_test.py --bin ../build/shared/bin/ --size 10 \
+    && make install
+
+WORKDIR /usr/local/bin
+RUN set -x \
     && ls /usr/local/bin/ss-* | xargs -n1 setcap cap_net_bind_service+ep \
     && strip $(ls /usr/local/bin | grep -Ev 'ss-nat' | grep -Ev 'ss-setup')
 

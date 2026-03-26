@@ -1,11 +1,13 @@
-FROM rust:1.91-alpine3.21 AS builder
+FROM rust:1.94-alpine3.23 AS builder
 
 ARG TARGETARCH
+ARG BUILDARCH
 
-ARG VERSION=1.23.5
+ARG VERSION=1.24.0
 
 RUN set -x \
-    && apk add --no-cache build-base git
+    && apk add --no-cache build-base git \
+    && echo "Building for ${TARGETARCH} on ${BUILDARCH}"
 
 WORKDIR /src
 
@@ -34,21 +36,20 @@ RUN set -x \
         ;; \
     esac \
     && wget -qO- "https://github.com/AaronChen0/musl-cc-mirror/releases/download/2021-09-23/$MUSL-cross.tgz" | tee >(sha512sum | grep -q "^$SHA512 " || exit 1) | tar -xzC . \
-    && CC="gcc" \
-    && TOOLCHAIN_CC="/src/$MUSL-cross/bin/$MUSL-gcc" \
-    && if [ -x "$TOOLCHAIN_CC" ] && "$TOOLCHAIN_CC" --version >/dev/null 2>&1; then \
-        CC="$TOOLCHAIN_CC"; \
-        echo "Using downloaded cross toolchain: $CC"; \
+    && TOOLCHAIN="/src/$MUSL-cross/bin/$MUSL-gcc" \
+    && if [ -x "$TOOLCHAIN" ] && "$TOOLCHAIN" --version >/dev/null 2>&1; then \
+        CC="$TOOLCHAIN"; \
+        echo "INFO: Using downloaded cross toolchain: $CC"; \
     else \
-        echo "WARN: downloaded cross toolchain is not executable on this builder, fallback to native gcc"; \
+        CC="gcc"; \
+        echo "INFO: downloaded cross toolchain is not executable on this builder, fallback to native gcc"; \
     fi \
     && echo "CC=$CC" \
     && rustup target add "$RUST_TARGET" \
     && RUSTFLAGS="-C linker=$CC" CC=$CC cargo build --target "$RUST_TARGET" --release --features "full" \
-    && RUSTFLAGS="-C linker=$CC" CC=$CC cargo build --target "$RUST_TARGET" --release --features "local-tun local-redir stream-cipher aead-cipher-2022" \
     && mv target/$RUST_TARGET/release/ss* target/release/ 
 
-FROM alpine:3.21 AS ssserver
+FROM alpine:3.23 AS ssserver
 
 LABEL maintainer="WavE Docker Maintainers <waveworkshop@outlook.com>"
 

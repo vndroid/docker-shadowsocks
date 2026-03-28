@@ -29,7 +29,7 @@ RUN set -x \
 WORKDIR /usr/local/bin
 RUN set -x \
     && ls /usr/local/bin/ss-* | xargs -n1 setcap cap_net_bind_service+ep \
-    && strip $(ls /usr/local/bin | grep -Ev 'ss-nat' | grep -Ev 'ss-setup')
+    && strip $(scanelf --nobanner -E 'ET_DYN' /usr/local/bin/ss-* | awk '{print $2}')
 
 
 FROM alpine:3.19

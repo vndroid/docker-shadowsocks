@@ -6,9 +6,9 @@ on:
       - 'shadowsocks-libev/**'
   workflow_dispatch:
 env:
-  REGISTRY: ghcr.io
-  ARTIFACTS: shadowsocks
-  TYPE: libev
+  REGISTRY: 'ghcr.io'
+  ARTIFACT: 'shadowsocks'
+  TYPE: 'libev'
 jobs:
   prepare:
     name: Parse ARGs
@@ -36,19 +36,19 @@ jobs:
           fi
           OS_NME=$(grep -E '^FROM' Dockerfile | head -n 1 | sed 's/^FROM[[:space:]]\(.*\):\(.*\)[[:space:]]AS\(.*\)$/\1/' | sed 's/[^a-zA-Z]//g')
           OS_VER=$(grep -E '^FROM' Dockerfile | head -n 1 | sed 's/^FROM[[:space:]]\(.*\):\(.*\)[[:space:]]AS\(.*\)$/\2/' | sed 's/[^0-9.]//g')
-          AF_VER=$(grep -E '^ARG[[:space:]]VERSION' Dockerfile | tail -n 1 | sed 's/^ARG[[:space:]]VERSION=\(.*\)$/\1/' | sed 's/[^0-9.]//g')
+          AU_VER=$(grep -E '^ARG[[:space:]]VERSION' Dockerfile | tail -n 1 | sed 's/^ARG[[:space:]]VERSION=\(.*\)$/\1/' | sed 's/[^0-9.]//g')
           # check if values are empty
-          if [ -z "$OS_NME" ] || [ -z "$OS_VER" ] || [ -z "$AF_VER" ]; then
+          if [ -z "$OS_NME" ] || [ -z "$OS_VER" ] || [ -z "$AU_VER" ]; then
             echo "Error: One or more ARG values are empty"
             exit 1
           fi
           # echo results
-          echo "OS: '${OS_NME}'-'${OS_VER}'"
-          echo "'v${AF_VER}'"
+          echo "OS: '${OS_NME}:${OS_VER}'"
+          echo "AU: '${{ env.ARTIFACT }}-${{ env.TYPE }}:${AU_VER}'"
           # set outputs
           echo "os_nme=${OS_NME}" >> $GITHUB_OUTPUT
           echo "os_ver=${OS_VER}" >> $GITHUB_OUTPUT
-          echo "pd_ver=${AF_VER}" >> $GITHUB_OUTPUT
+          echo "pd_ver=${AU_VER}" >> $GITHUB_OUTPUT
   build:
     name: Build and Push (${{ matrix.arch }})
     permissions:
@@ -85,7 +85,7 @@ jobs:
         with:
           push: true
           context: ./shadowsocks-libev/alpine/
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACTS }}:${{ env.TYPE }}-${{ steps.normalize.outputs.arch_tag }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACT }}:${{ env.TYPE }}-${{ steps.normalize.outputs.arch_tag }}
   merge:
     name: Create and Push Multi-Arch Manifest
     runs-on: ubuntu-24.04
@@ -104,9 +104,9 @@ jobs:
       - name: Create and Push Manifest linux/amd64, linux/arm64
         run: |
           docker buildx imagetools create \
-            --tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACTS }}:${{ needs.prepare.outputs.pd_ver }}-${{ env.TYPE }}-${{ needs.prepare.outputs.os_nme }}${{ needs.prepare.outputs.os_ver }} \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACTS }}:${{ env.TYPE }}-amd64 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACTS }}:${{ env.TYPE }}-arm64
+            --tag ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACT }}:${{ needs.prepare.outputs.pd_ver }}-${{ env.TYPE }}-${{ needs.prepare.outputs.os_nme }}${{ needs.prepare.outputs.os_ver }} \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACT }}:${{ env.TYPE }}-amd64 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.ARTIFACT }}:${{ env.TYPE }}-arm64
   cleanup:
     name: Cleanup Obsoleting Tags
     runs-on: ubuntu-slim
@@ -122,7 +122,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           OWNER=${{ github.repository_owner }}
-          IMAGE=${{ env.ARTIFACTS }}
+          IMAGE=${{ env.ARTIFACT }}
           for TAG in "${{ env.TYPE }}-amd64" "${{ env.TYPE }}-arm64"; do
             VERSION_ID=$(gh api -H "Accept: application/vnd.github+json" \
               /users/$OWNER/packages/container/$IMAGE/versions \
@@ -141,4 +141,4 @@ jobs:
           delete-untagged: true
           owner: ${{ github.repository_owner }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          package: ${{ env.ARTIFACTS }}
+          package: ${{ env.ARTIFACT }}

@@ -1,4 +1,4 @@
-FROM alpine:3.19 AS builder
+FROM alpine:3.23 AS builder
 
 ARG VERSION=3.3.6
 
@@ -32,7 +32,7 @@ RUN set -x \
     && strip $(scanelf --nobanner -E 'ET_DYN' /usr/local/bin/ss-* | awk '{print $2}')
 
 
-FROM alpine:3.19
+FROM alpine:3.23
 
 LABEL maintainer="WavE Docker Maintainers <waveworkshop@outlook.com>"
 
